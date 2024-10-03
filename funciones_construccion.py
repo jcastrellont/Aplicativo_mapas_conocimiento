@@ -22,6 +22,7 @@ import networkx as nx
 import community
 import community.community_louvain as cl
 from sklearn.metrics.pairwise import cosine_similarity
+from collections import Counter
 
 ################################################################################
 ################################################################################
@@ -33,6 +34,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 ################################################################################
 ## Funciones para busqueda
 ################################################################################
+    
 
 # Función para realizar la búsqueda en Arxiv
 def search_arxiv(query, max_results=1000):

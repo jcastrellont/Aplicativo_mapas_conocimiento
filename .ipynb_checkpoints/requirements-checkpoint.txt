@@ -1,0 +1,9 @@
+community==1.0.0b1
+keybert==0.8.5
+matplotlib==3.9.2
+networkx==3.3
+nltk==3.9.1
+numpy==2.1.1
+pandas==2.2.3
+Requests==2.32.3
+scikit_learn==1.5.2
