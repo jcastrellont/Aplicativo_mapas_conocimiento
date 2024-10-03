@@ -253,13 +253,16 @@ def kmeans(dataframe, clusters=30):
     model=mod.fit(tfidf_matrix )
     dataframe['cluster_kmeans']=model.predict(tfidf_matrix)
     dataframe['cluster_kmeans']='cluster_'+dataframe['cluster_kmeans'].astype(str)
-    return dataframe
-
+    contador = Counter(model.predict(tfidf_matrix))
+    magnitud_nodo=pd.DataFrame(contador.items(), columns=['cluster_kmeans', 'cantidad'])
+    magnitud_nodo['cluster_kmeans']=['cluster_'+str(magnitud_nodo['cluster_kmeans'][i]) for i in range(len(magnitud_nodo))]
+    return dataframe, magnitud_nodo
+    
 ################################################################################
 ## Procesamiento Final
 ################################################################################
 
-def final_process(dataframe):
+def final_process(dataframe, magnitud_nodo):
     data_agrup = dataframe.groupby('cluster_kmeans').agg({
                                                             'title': ' '.join,
                                                             'abstract': ' '.join
@@ -271,7 +274,8 @@ def final_process(dataframe):
     results = [[key for key, prob in sorted(sublist, key=lambda x: x[1], reverse=True)[:1]] for sublist in aa]
     data_agrup['Grupo_keyBERT']=results
     data_agrup['Grupo_keyBERT']=data_agrup['Grupo_keyBERT'].str[0]
-    return(data_agrup)
+    data_agrup=data_agrup.merge(magnitud_nodo)
+    return data_agrup
 
 ################################################################################
 ## Indicadores de similitud
@@ -302,7 +306,10 @@ def similarities_df(data_agrup):
     # Agregar la similitud coseno como una nueva columna en el DataFrame
     similarities['sim_coseno'] = cosine_similarities
     similarities['disim_coseno']=1-similarities['sim_coseno']
-    return similarities
+    top_frame=similarities[(similarities['sim_coseno']!=0)&(similarities['sim_coseno']!=1)]
+    top_frame['sim_coseno']=(top_frame['sim_coseno']-top_frame['sim_coseno'].min())/(top_frame['sim_coseno'].max()-top_frame['sim_coseno'].min())
+    data_agrup2=data_agrup[(data_agrup['Grupo_keyBERT'].isin(top_frame['Grupo_keyBERT'].unique()))]
+    return top_frame, data_agrup2
 
 ################################################################################
 ## Resultado final
@@ -317,31 +324,54 @@ def mapas_conocimiento(dataframe):
     dataframe=keybert_keywords('title',dataframe)
     dataframe['keywords_total']=dataframe['abstract_keyword_TFIDF1']+' '+dataframe['abstract_keyword_TFIDF2']+' '+dataframe['abstract_keyword_TFIDF3']+' '+dataframe['title_keyword_TFIDF1']\
                         +' '+dataframe['title_keyword_TFIDF2']+' '+dataframe['title_keyword_TFIDF3']+' '+dataframe['abstract_keyword_keybert']+' '+dataframe['title_keyword_keybert']
-    dataframe=kmeans(dataframe)
-    data_agrup=final_process(dataframe)
-    data_agrup=similarities_df(data_agrup)
-    return data_agrup
+    lista_obj_0,lista_obj_1=kmeans(dataframe)
+    dataframe=lista_obj_0
+    data_agrup=final_process(dataframe,lista_obj_1)
+    lista_obj2_0,lista_obj2_1=similarities_df(data_agrup)
+    similarities=lista_obj2_0
+    data_agrup2=lista_obj2_1
+    return similarities, data_agrup2
 
 ################################################################################
 ## Mapas de conocimiento
 ################################################################################
 
-def mapa(similarities, name):
-    top_frame=similarities[similarities['sim_coseno']!=0]
-    top_frame['sim_coseno']=(top_frame['sim_coseno']-top_frame['sim_coseno'].min())/(top_frame['sim_coseno'].max()-top_frame['sim_coseno'].min())
-    edges = list(zip(top_frame['Grupo_keyBERT'], top_frame['Grupo_keyBERT_2']))
-    weighted_edges = list(zip(top_frame['Grupo_keyBERT'], top_frame['Grupo_keyBERT_2'], top_frame['sim_coseno']))
-    nodes = list(set(top_frame['Grupo_keyBERT']).union(set(top_frame['Grupo_keyBERT_2'])))
+def mapa(top_frame, data_agrup2, name, query):
+    # Crear un grafo vacío
     G = nx.Graph()
-    G.add_nodes_from(nodes)
-    G.add_edges_from(edges)
-    G.add_weighted_edges_from(weighted_edges)
-    partition = cl.best_partition(G)
-    modularity = cl.modularity(partition, G)
-    pos = nx.spring_layout(G, dim=2)
-    community_id = [partition[node] for node in G.nodes()]
-    fig = plt.figure(figsize=(30,30))
-    nx.draw(G, pos,with_labels=True, edge_color = ['black']*len(G.edges()), cmap=plt.cm.tab20,
-            node_color=community_id, node_size=20550)
+    
+    # Añadir nodos con tamaños proporcionales al número de elementos
+    for _, row in data_agrup2.iterrows():
+        G.add_node(row['Grupo_keyBERT'], size=row['cantidad'])
+    
+    # Añadir aristas con pesos proporcionales al índice de similitud
+    for _, row in top_frame.iterrows():
+        G.add_edge(row['Grupo_keyBERT'], row['Grupo_keyBERT_2'], weight=row['sim_coseno'])
+    
+    # Obtener tamaños de los nodos para visualización
+    sizes = [G.nodes[node]['size']*50 for node in G.nodes()]
+    
+    # Obtener pesos de las aristas para visualización
+    weights = [G[u][v]['weight'] * 10 for u, v in G.edges()]
+    
+    # Dibujar el grafo
+    pos = nx.spring_layout(G)  # Posiciones de los nodos
+    
+    plt.figure(figsize=(15, 12))
+    
+    # Dibujar los nodos con tamaños proporcionales al número de elementos
+    nx.draw_networkx_nodes(G, pos, node_size=sizes, node_color='lightblue', alpha=0.8)
+    
+    # Dibujar las aristas con grosores proporcionales a la similitud, y añadir curvas
+    nx.draw_networkx_edges(G, pos, node_size=1000, width=weights, edge_color='lightgray', 
+                           connectionstyle='arc3,rad=0.7')  # Aquí se curva la arista
+    
+    # Añadir etiquetas a los nodos
+    nx.draw_networkx_labels(G, pos, font_size=8, font_color='black')
+    
+    # Mostrar el gráfico
+    plt.title("Mapa de Conocimiento: "+str(query))
+    plt.axis('off')  # Desactivar los ejes
+
     plt.savefig(str(name)+'.png')
     return plt
