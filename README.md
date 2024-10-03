@@ -11,3 +11,7 @@ El presente ejecutable permite construir el mapa de conocimiento que ofrece una 
 4. **Máximo de resultados:** Este insumo permite al usuario filtrar por el número total de artículos a considerar. Por cuestión de recursos y de permisos con la plataforma de Arxiv, se recomienda que este valor no sea superior a los 2000
 
 5. **Nombre del mapa:** La salida de este ejecutable, es una imagen .png que contiene el mapa de conocimiento construido y que será guardada en la misma carpeta donde quede instalada esta herramienta en su computador local. Por está razón se pide el nombre del mapa para que quede almacenado.
+
+   
+![prueba](https://github.com/user-attachments/assets/080d1a97-4fed-495b-a6d5-0f241257f123)
+
