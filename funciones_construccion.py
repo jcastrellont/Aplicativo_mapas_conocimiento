@@ -19,8 +19,6 @@ import warnings
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import networkx as nx
-import community
-import community.community_louvain as cl
 from sklearn.metrics.pairwise import cosine_similarity
 from collections import Counter
 
