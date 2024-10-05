@@ -19,10 +19,10 @@ import warnings
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import networkx as nx
-import community
-import community.community_louvain as cl
 from sklearn.metrics.pairwise import cosine_similarity
 from collections import Counter
+import tkinter as tk
+from tkinter import messagebox
 
 ################################################################################
 ################################################################################
@@ -375,5 +375,65 @@ def mapa(top_frame, data_agrup2, name, query):
     plt.title("Mapa de Conocimiento: "+str(query))
     plt.axis('off')  # Desactivar los ejes
 
-    plt.savefig(str(name)+'.png')
+    plt.savefig('mapas/'+str(name)+'.png')
     return plt
+
+################################################################################
+## Aplicativo para mapas
+################################################################################
+
+def ejecutable_aplicativo():
+    # Función para ejecutar el código con los parámetros ingresados
+    def ejecutar_busqueda():
+        query = query_entry.get()
+        start_date = start_date_entry.get()
+        end_date = end_date_entry.get()
+        max_results = max_results_entry.get()
+        nombre = nombre_entry.get()
+    
+        if not query or not start_date or not end_date or not max_results or not nombre:
+            messagebox.showwarning("Campos incompletos", "Por favor, completa todos los campos.")
+            return
+    
+        try:
+            max_results = int(max_results)  # Asegurar que sea un número
+            # Ejecutar las funciones del código original
+            df_papers = get_arxiv_papers_df(query, max_results, start_date, end_date)
+            input_0, input_1 = mapas_conocimiento(df_papers)
+            mapa(input_0, input_1, nombre, query)
+            messagebox.showinfo("Éxito", "El mapa de conocimiento se ha construido correctamente.")
+        except ValueError:
+            messagebox.showerror("Error", "Asegúrate de que el número máximo de resultados sea un valor entero.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Ocurrió un error: {e}")
+    
+    # Crear la ventana principal
+    root = tk.Tk()
+    root.title("Aplicativo de Construcción de Mapas de Conocimiento")
+    
+    # Crear los campos de entrada
+    tk.Label(root, text="Palabra clave:").grid(row=0, column=0)
+    query_entry = tk.Entry(root)
+    query_entry.grid(row=0, column=1)
+    
+    tk.Label(root, text="Fecha de inicio (YYYY-MM-DD):").grid(row=1, column=0)
+    start_date_entry = tk.Entry(root)
+    start_date_entry.grid(row=1, column=1)
+    
+    tk.Label(root, text="Fecha de fin (YYYY-MM-DD):").grid(row=2, column=0)
+    end_date_entry = tk.Entry(root)
+    end_date_entry.grid(row=2, column=1)
+    
+    tk.Label(root, text="Número máximo de resultados:").grid(row=3, column=0)
+    max_results_entry = tk.Entry(root)
+    max_results_entry.grid(row=3, column=1)
+    
+    tk.Label(root, text="Nombre del mapa:").grid(row=4, column=0)
+    nombre_entry = tk.Entry(root)
+    nombre_entry.grid(row=4, column=1)
+    
+    # Botón para ejecutar la búsqueda
+    tk.Button(root, text="Buscar y construir mapa", command=ejecutar_busqueda).grid(row=5, column=0, columnspan=2)
+    
+    # Iniciar el loop de la ventana
+    root.mainloop()
