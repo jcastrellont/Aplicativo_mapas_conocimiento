@@ -317,7 +317,7 @@ def similarities_df(data_agrup):
 ## Resultado final
 ################################################################################
 
-def mapas_conocimiento(dataframe):
+def mapas_conocimiento(dataframe,name):
     dataframe["title_transformed"] = dataframe["title"].apply(process_text)
     dataframe["abstract_transformed"] = dataframe["abstract"].apply(process_text)
     dataframe=tfidf_extractor('abstract',dataframe)
@@ -327,8 +327,19 @@ def mapas_conocimiento(dataframe):
     dataframe['keywords_total']=dataframe['abstract_keyword_TFIDF1']+' '+dataframe['abstract_keyword_TFIDF2']+' '+dataframe['abstract_keyword_TFIDF3']+' '+dataframe['title_keyword_TFIDF1']\
                         +' '+dataframe['title_keyword_TFIDF2']+' '+dataframe['title_keyword_TFIDF3']+' '+dataframe['abstract_keyword_keybert']+' '+dataframe['title_keyword_keybert']
     lista_obj_0,lista_obj_1=kmeans(dataframe)
-    dataframe=lista_obj_0
-    data_agrup=final_process(dataframe,lista_obj_1)
+    data_agrup=final_process(lista_obj_0,lista_obj_1)
+    salida=lista_obj_0.merge(data_agrup[['cluster_kmeans','Grupo_keyBERT']],on='cluster_kmeans', how='left').sort_values(by='Grupo_keyBERT')
+    salida=salida[['title','abstract','published_date', 'Grupo_keyBERT','title_keyword_keybert','abstract_keyword_keybert','title_keyword_TFIDF1',
+            'abstract_keyword_TFIDF1',
+            'abstract_keyword_TFIDF2',
+            'abstract_keyword_TFIDF3']].rename(columns={'Grupo_keyBERT':'group',
+                                                       'title_keyword_keybert':'title_keyphrase',
+                                                       'abstract_keyword_keybert':'abstract_keyphrase',
+                                                       'title_keyword_TFIDF1':'title_keyword',
+                                                       'abstract_keyword_TFIDF1':'abstract_keyword1',
+                                                       'abstract_keyword_TFIDF2':'abstract_keyword2',
+                                                       'abstract_keyword_TFIDF3':'abstract_keyword3'})
+    salida.to_excel('Tablas_documentos/tabla_mapa_'+name+'.xlsx',index=False)
     lista_obj2_0,lista_obj2_1=similarities_df(data_agrup)
     similarities=lista_obj2_0
     data_agrup2=lista_obj2_1
@@ -399,7 +410,7 @@ def ejecutable_aplicativo():
             max_results = int(max_results)  # Asegurar que sea un número
             # Ejecutar las funciones del código original
             df_papers = get_arxiv_papers_df(query, max_results, start_date, end_date)
-            input_0, input_1 = mapas_conocimiento(df_papers)
+            input_0, input_1 = mapas_conocimiento(df_papers, nombre)
             mapa(input_0, input_1, nombre, query)
             messagebox.showinfo("Éxito", "El mapa de conocimiento se ha construido correctamente.")
         except ValueError:
